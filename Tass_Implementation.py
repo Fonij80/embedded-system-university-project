@@ -1,3 +1,11 @@
+import networkx as nx
+import random
+from typing import Dict
+from typing import Any
+
+from matplotlib import pyplot as plt
+
+
 class Core:
     def __init__(self):
         self.schedule = []
@@ -97,12 +105,105 @@ class TaskScheduler:
                     core_pair.spare_core.schedule(selected_task.get_bi(), t)  # Step 26
                     break
 
+def generate_dag(n: int, density: float, regularity: float, fatness: float) -> nx.DiGraph:
+    if n <= 1:
+        raise ValueError("Number of tasks must be greater than 1")
+
+    G = nx.DiGraph()
+
+    max_width = int(n * fatness)
+    num_levels = max(2, n // max_width)
+
+    nodes_per_level = [[] for _ in range(num_levels)]
+    current_node = 0
+
+    for level in range(num_levels):
+        if level == 0:
+            width = min(max_width // 2, n)
+        elif level == num_levels - 1:
+            width = n - current_node
+        else:
+            width = min(max_width, n - current_node)
+
+        for _ in range(width):
+            exec_time = random.uniform(1, 15)
+            slack_factor = random.uniform(1.5, 3)
+            deadline = exec_time * slack_factor
+
+            G.add_node(current_node,
+                      label=f"T{current_node}",
+                      exec_time=round(exec_time, 2),
+                      deadline=round(deadline, 2))
+            nodes_per_level[level].append(current_node)
+            current_node += 1
+
+    for level in range(num_levels - 1):
+        current_level_nodes = nodes_per_level[level]
+        next_level_nodes = nodes_per_level[level + 1]
+
+        for source in current_level_nodes:
+            num_edges = max(1, int(len(next_level_nodes) * density))
+
+            if random.random() < regularity:
+                num_edges = min(num_edges + 1, len(next_level_nodes))
+
+            targets = random.sample(next_level_nodes, num_edges)
+            for target in targets:
+                G.add_edge(source, target)
+
+    return G
+
+def draw_dag(G: nx.DiGraph, title: str = "DAG") -> None:
+    plt.figure(figsize=(12, 8))
+    pos = nx.kamada_kawai_layout(G)
+
+    nx.draw_networkx_nodes(G, pos, node_color='lightblue',
+                          node_size=2000, alpha=0.7)
+
+    nx.draw_networkx_edges(G, pos, edge_color='gray',
+                          arrows=True, arrowsize=20)
+
+    labels = {}
+    for node in G.nodes():
+        data = G.nodes[node]
+        labels[node] = f"{data['label']}\nET:{data['exec_time']:.1f}\nDL:{data['deadline']:.1f}"
+
+    nx.draw_networkx_labels(G, pos, labels, font_size=8)
+
+    plt.title(title)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+def print_dag_stats(G: nx.DiGraph) -> Dict[str, Any]:
+    stats = {
+        'num_nodes': G.number_of_nodes(),
+        'num_edges': G.number_of_edges(),
+        'avg_degree': float(G.number_of_edges()) / G.number_of_nodes(),
+        'critical_path': nx.dag_longest_path_length(G),
+        'levels': len(list(nx.topological_generations(G)))
+    }
+
+    print("\nDAG Statistics:")
+    for key, value in stats.items():
+        print(f"{key}: {value}")
+
+
+n_tasks = 10
+density = 0.4
+regularity = 0.6
+fatness = 0.4
+
+dag = generate_dag(n_tasks, density, regularity, fatness)
+
+draw_dag(dag, "Generated DAG")
+stats = print_dag_stats(dag)
 
 # Example usage:
 
-# Define tasks and cores here...
-tasks = [Task("Task1", deadline=10, power=5), Task("Task2", deadline=15, power=3)]
-core_pairs = [CorePair(primary_core=Core(), spare_core=Core())]
-
-scheduler = TaskScheduler(tasks, core_pairs)
-scheduler.schedule_tasks()
+# # Define tasks and cores here...
+# tasks = [Task("Task1", deadline=10, power=5), Task("Task2", deadline=15, power=3)]
+# core_pairs = [CorePair(primary_core=Core(), spare_core=Core())]
+#
+# scheduler = TaskScheduler(tasks, core_pairs)
+# scheduler.schedule_tasks()
