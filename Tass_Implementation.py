@@ -127,15 +127,15 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
 
         for _ in range(width):
             exec_time = random.uniform(1, 15)
-            slack_factor = random.uniform(1.5, 3)
-            deadline = exec_time * slack_factor
+            deadline = 0
 
             G.add_node(current_node,
                       label=f"T{current_node}",
                       exec_time=round(exec_time, 2),
                       deadline=round(deadline, 2))
             nodes_per_level[level].append(current_node)
-            current_node += 1
+            if current_node < n-1:
+                current_node += 1
 
     for level in range(num_levels - 1):
         current_level_nodes = nodes_per_level[level]
@@ -150,6 +150,25 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
             targets = random.sample(next_level_nodes, num_edges)
             for target in targets:
                 G.add_edge(source, target)
+
+    current_node = 0
+    for node in G.nodes:
+        slack_factor = random.uniform(1.5, 3)
+        deadline = G.nodes[node]['exec_time'] * slack_factor
+
+        if list(G.predecessors(node)):
+            parent_deadlines = [
+                G.nodes[parent]['deadline'] for parent in G.predecessors(node) if G.has_node(parent)
+            ]
+            if parent_deadlines:
+                parent_deadline = max(parent_deadlines)
+
+                while deadline <= parent_deadline:
+                    slack_factor = random.uniform(1.5, 3)
+                    deadline = parent_deadline + G.nodes[node]['exec_time'] * slack_factor
+
+        G.nodes[node]['deadline'] = round(deadline, 2)
+        print(f'node {node} completed! deadline: {G.nodes[node]["deadline"]}')
 
     return G
 
