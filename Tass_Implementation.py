@@ -126,13 +126,18 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
             width = min(max_width, n - current_node)
 
         for _ in range(width):
-            exec_time = random.uniform(1, 15)
+            exec_time_1 = random.uniform(1, 15)
+            exec_time_2 = random.uniform(1, 15)
+            WC_low = max(exec_time_1, exec_time_2)
+            WC_high = min(exec_time_1, exec_time_2)
             deadline = 0
 
             G.add_node(current_node,
-                      label=f"T{current_node}",
-                      exec_time=round(exec_time, 2),
-                      deadline=round(deadline, 2))
+                       label=f"T{current_node}",
+                       WC_low=round(WC_low, 2),
+                       WC_high=round(WC_high, 2),
+                       deadline=round(deadline, 2))
+
             nodes_per_level[level].append(current_node)
             if current_node < n-1:
                 current_node += 1
@@ -154,7 +159,7 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
     current_node = 0
     for node in G.nodes:
         slack_factor = random.uniform(1.5, 3)
-        deadline = G.nodes[node]['exec_time'] * slack_factor
+        deadline = (G.nodes[node]['WC_low'] + G.nodes[node]['WC_high']) * slack_factor
 
         if list(G.predecessors(node)):
             parent_deadlines = [
@@ -165,10 +170,14 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
 
                 while deadline <= parent_deadline:
                     slack_factor = random.uniform(1.5, 3)
-                    deadline = parent_deadline + G.nodes[node]['exec_time'] * slack_factor
+                    deadline = parent_deadline + (G.nodes[node]['WC_low'] + G.nodes[node]['WC_high']) * slack_factor
 
         G.nodes[node]['deadline'] = round(deadline, 2)
-        print(f'node {node} completed! deadline: {G.nodes[node]["deadline"]}')
+        print(f'node {node} :')
+        print(G.nodes[node])
+        print('parents: ')
+        print([G.nodes[parent]['label'] for parent in G.predecessors(node)])
+        print('\n')
 
     return G
 
@@ -185,7 +194,7 @@ def draw_dag(G: nx.DiGraph, title: str = "DAG") -> None:
     labels = {}
     for node in G.nodes():
         data = G.nodes[node]
-        labels[node] = f"{data['label']}\nET:{data['exec_time']:.1f}\nDL:{data['deadline']:.1f}"
+        labels[node] = f"{data['label']}\nlow:{data['WC_low']:.1f}\nhigh:{data['WC_high']:.1f}\ndeadline:{data['deadline']:.1f}"
 
     nx.draw_networkx_labels(G, pos, labels, font_size=8)
 
