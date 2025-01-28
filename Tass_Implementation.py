@@ -39,21 +39,45 @@ class CorePair:
 
 
 class TaskScheduler:
-    def __init__(self, tasks, core_pairs):
-        self.tasks = tasks  # Set of tasks in graph Φ
+    def __init__(self, core_pairs, G):
+        self.graph = G  # Set of tasks in graph G
         self.core_pairs = core_pairs  # Set of core pairs CP
-        self.temp_queue = []  # TQ
-        self.priority_queue = []  # PQ
+        self.leaves = []
+        self.priority_queue = []
 
     def return_leaves(self):
         # Assuming this method returns the leaves of the graph (tasks with no dependencies)
-        return [task for task in self.tasks if not task.has_dependencies()]
+        for node in self.graph:
+            if len(list(self.graph.successors(node))) == 0 and (node not in self.leaves):
+                self.leaves.append(node)
 
-    def select_latest_deadline(self):
+    def make_priority_queue(self):
         # Select the task with the latest deadline from priority queue
-        if not self.priority_queue:
-            return None
-        return max(self.priority_queue, key=lambda t: t.deadline)
+        while (len(self.graph.nodes) > 0):
+            self.return_leaves()
+            selected_node = self.graph.nodes.get(self.leaves[0])
+            # print(self.leaves[0])
+            print(selected_node)
+            for key in self.leaves:
+                # print(self.graph.nodes[key]['deadline'])
+                if self.graph.nodes[key]['deadline'] > selected_node['deadline']:
+                    selected_node = self.graph.nodes.get(key)
+                    # print(selected_node)
+
+            selected_key = None
+            for key in self.graph.nodes.keys():
+                if self.graph.nodes.get(key) == selected_node:
+                    selected_key = key
+
+            print(selected_key)
+            self.graph.remove_node(selected_key)
+            print(self.leaves)
+            self.leaves.remove(selected_key)
+            # self.leaves.remove(self.leaves[0])
+            print(self.leaves)
+            self.priority_queue.append(selected_node)
+
+        print(self.priority_queue)
 
     def min_utilization(self):
         # Placeholder for finding the minimum utilization core pair
