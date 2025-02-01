@@ -17,9 +17,6 @@ class CorePair:
         self.is_low_active = False
         self.t += 1
 
-    def get_utilization(self, total_time):
-        pass
-
     def find_first_free_time_slot_after(self, k):
         # Logic to find the first free time slot after k
         # This is just a placeholder; implement your logic accordingly
@@ -62,8 +59,16 @@ class System:
                     pair.is_high_active=False
 
 
+    def get_number_of_active_cores(self):
+        t = 0
+        for island in self.islands:
+            if island.is_high_active: t += 1
+            if island.is_low_active: t += 1
+        return t
+
+
 class TaskScheduler:
-    def __init__(self, core_pairs, G):
+    def __init__(self, core_pairs, G, system):
         self.graph = G  # Set of tasks in graph G
         self.core_pairs = core_pairs  # Set of core pairs CP
         self.leaves = []
@@ -106,49 +111,54 @@ class TaskScheduler:
         return self.core_pairs[0]  # Example: Return the first core pair
 
     def schedule_tasks(self):
-        while self.tasks:
-            # Step 3: Return leaves of graph
-            self.temp_queue = self.return_leaves()
+        self.make_priority_queue()
+        while len(self.priority_queue)>0:
+            unscheduled_task = self.priority_queue[len(self.priority_queue-1)]
+            self.priority_queue.remove(unscheduled_task)
+            selected_core_pair = self.min_utilization()
 
-            # Step 4: Select a task with the latest deadline
-            if not self.temp_queue:
-                break
+            if list(self.graph.predecessors(unscheduled_task)):
+                parent_deadlines = [
+                    self.graph.nodes[parent]['deadline'] for parent in self.graph.predecessors(unscheduled_task) if self.graph.has_node(parent)
+                ]
+                if parent_deadlines:
+                    k = max(parent_deadlines)
 
-            selected_task = max(self.temp_queue, key=lambda t: t.deadline)
-            self.priority_queue.append(selected_task)  # Step 5: Put Ti to PQ
-            self.tasks.remove(selected_task)  # Step 6: Remove Ti from the graph
+            while k <= unscheduled_task['deadline'] - unscheduled_task['WC_high']:
+                t = selected_core_pair.find_first_free_time_slot_after(k)
 
-        while self.priority_queue:
-            selected_task = self.select_latest_deadline()  # Step 9
 
-            if not selected_task:
-                break
-
-            core_pair = self.min_utilization()  # Step 10
-            k = max(selected_task.get_finish_time_of_predecessors())  # Step 11
-
-            while k <= selected_task.deadline - selected_task.get_w():  # Step 12
-                t = core_pair.primary_core.find_first_free_time_slot_after(k)  # Step 13
-
-                TSP_primary = core_pair.primary_core.get_tsp(active_cores_at=t)  # Step 14
-
-                if selected_task.power <= TSP_primary:  # Step 15
-                    core_pair.primary_core.schedule(selected_task, t)  # Step 16
-                    self.priority_queue.remove(selected_task)  # Step 17
-                    break
-
-                k = t + 1
-
-            k = selected_task.get_finish_time_on_primary()  # Step 21
-
-            while not selected_task.is_bi_scheduled():  # Step 22
-                t = core_pair.primary_core.find_first_free_time_slot_after(k)  # Step 23
-
-                TSP_spare = core_pair.spare_core.get_tsp(active_cores_at=t)  # Step 24
-
-                if selected_task.get_bi_power() <= TSP_spare:  # Step 25
-                    core_pair.spare_core.schedule(selected_task.get_bi(), t)  # Step 26
-                    break
+        # while self.priority_queue:
+        #     selected_task = self.select_latest_deadline()  # Step 9
+        #
+        #     if not selected_task:
+        #         break
+        #
+        #     core_pair = self.min_utilization()  # Step 10
+        #     k = max(selected_task.get_finish_time_of_predecessors())  # Step 11
+        #
+        #     while k <= selected_task.deadline - selected_task.get_w():  # Step 12
+        #         t = core_pair.primary_core.find_first_free_time_slot_after(k)  # Step 13
+        #
+        #         TSP_primary = core_pair.primary_core.get_tsp(active_cores_at=t)  # Step 14
+        #
+        #         if selected_task.power <= TSP_primary:  # Step 15
+        #             core_pair.primary_core.schedule(selected_task, t)  # Step 16
+        #             self.priority_queue.remove(selected_task)  # Step 17
+        #             break
+        #
+        #         k = t + 1
+        #
+        #     k = selected_task.get_finish_time_on_primary()  # Step 21
+        #
+        #     while not selected_task.is_bi_scheduled():  # Step 22
+        #         t = core_pair.primary_core.find_first_free_time_slot_after(k)  # Step 23
+        #
+        #         TSP_spare = core_pair.spare_core.get_tsp(active_cores_at=t)  # Step 24
+        #
+        #         if selected_task.get_bi_power() <= TSP_spare:  # Step 25
+        #             core_pair.spare_core.schedule(selected_task.get_bi(), t)  # Step 26
+        #             break
 
 def get_cores():
     # gets cores from gem5 and convert them to our format
@@ -160,7 +170,7 @@ def assign_tasks_power_consumption(G, core_pairs):
     new_graph = G
     return new_graph
 
-def get_TSP():
+def get_TSP(number_of_active_cores):
     # gets TSP limits from Hotspot
     pass
 
@@ -291,8 +301,10 @@ draw_dag(dag, "Generated DAG")
 stats = print_dag_stats(dag)
 
 core_pairs = get_cores()
+system = System()
+system.islands.append(core_pairs)
 
 dag = assign_tasks_power_consumption(dag, core_pairs)
 
-task_schedular = TaskScheduler(core_pairs, dag)
-task_schedular.make_priority_queue()
+task_schedular = TaskScheduler(core_pairs, dag, system)
+task_schedular.schedule_tasks()
