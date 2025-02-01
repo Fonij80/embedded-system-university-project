@@ -6,9 +6,19 @@ from typing import Any
 from matplotlib import pyplot as plt
 
 
-class Core:
-    def __init__(self):
-        self.schedule = []
+class CorePair:
+    t = 0
+
+    def __init__(self, high_power, low_power):
+        self.pair_id = self.t
+        self.high_power_core = high_power
+        self.low_power_core = low_power
+        self.is_high_active = False
+        self.is_low_active = False
+        self.t += 1
+
+    def get_utilization(self, total_time):
+        pass
 
     def find_first_free_time_slot_after(self, k):
         # Logic to find the first free time slot after k
@@ -25,17 +35,31 @@ class Core:
         print(f"Scheduled {task.name} at time {time} on core.")
 
 
-class Task:
-    def __init__(self, name, deadline, power):
-        self.name = name
-        self.deadline = deadline
-        self.power = power
+class System:
+    def __init__(self):
+        self.islands = []
+        self.total_time = 200
 
+    def add_core_pair(self, core_pair):
+        self.islands.append(core_pair)
 
-class CorePair:
-    def __init__(self, primary_core, spare_core):
-        self.primary_core = primary_core
-        self.spare_core = spare_core
+    def activate(self, pair_id, core):
+        # if core==0 then high_power must be activated and if core==1 then low_power must be activated
+        for pair in self.islands:
+            if pair.pair_id == pair_id:
+                if(core):
+                    pair.is_low_active=True
+                else:
+                    pair.is_high_active=True
+
+    def deactivate(self, pair_id, core):
+        # if core==0 then high_power must be deactivated and if core==1 then low_power must be deactivated
+        for pair in self.islands:
+            if pair.pair_id == pair_id:
+                if(core):
+                    pair.is_low_active=False
+                else:
+                    pair.is_high_active=False
 
 
 class TaskScheduler:
@@ -132,8 +156,13 @@ def get_cores():
     return core_pairs
 
 def assign_tasks_power_consumption(G, core_pairs):
+    # assigns a power consumption on low_power and high_power core to tasks
     new_graph = G
     return new_graph
+
+def get_TSP():
+    # gets TSP limits from Hotspot
+    pass
 
 
 def generate_dag(n: int, density: float, regularity: float, fatness: float) -> nx.DiGraph:
@@ -161,12 +190,16 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
             exec_time_2 = random.uniform(1, 15)
             WC_low = max(exec_time_1, exec_time_2)
             WC_high = min(exec_time_1, exec_time_2)
+            low_power = 0
+            high_power = 0
             deadline = 0
 
             G.add_node(current_node,
                        label=f"T{current_node}",
                        WC_low=round(WC_low, 2),
                        WC_high=round(WC_high, 2),
+                       low_power=round(low_power, 2),
+                       high_power=round(high_power, 2),
                        deadline=round(deadline, 2))
 
             nodes_per_level[level].append(current_node)
@@ -253,6 +286,7 @@ regularity = 0.6
 fatness = 0.4
 
 dag = generate_dag(n_tasks, density, regularity, fatness)
+
 draw_dag(dag, "Generated DAG")
 stats = print_dag_stats(dag)
 
