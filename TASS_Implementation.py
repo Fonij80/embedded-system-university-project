@@ -2,7 +2,6 @@ import networkx as nx
 import random
 from typing import Dict
 from typing import Any
-
 from matplotlib import pyplot as plt
 
 
@@ -134,9 +133,6 @@ def get_cores():
     core_pairs = []
     return core_pairs
 
-def assign_tasks_power_consumption(G, core_pairs):
-    new_graph = None
-    return new_graph
 
 def generate_dag(n: int, density: float, regularity: float, fatness: float) -> nx.DiGraph:
     if n <= 1:
@@ -172,7 +168,7 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
                        deadline=round(deadline, 2))
 
             nodes_per_level[level].append(current_node)
-            if current_node < n-1:
+            if current_node < n - 1:
                 current_node += 1
 
     for level in range(num_levels - 1):
@@ -213,20 +209,22 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
 
     return G
 
+
 def draw_dag(G: nx.DiGraph, title: str = "DAG") -> None:
     plt.figure(figsize=(12, 8))
     pos = nx.kamada_kawai_layout(G)
 
     nx.draw_networkx_nodes(G, pos, node_color='lightblue',
-                          node_size=2000, alpha=0.7)
+                           node_size=2000, alpha=0.7)
 
     nx.draw_networkx_edges(G, pos, edge_color='gray',
-                          arrows=True, arrowsize=20)
+                           arrows=True, arrowsize=20)
 
     labels = {}
     for node in G.nodes():
         data = G.nodes[node]
-        labels[node] = f"{data['label']}\nlow:{data['WC_low']:.1f}\nhigh:{data['WC_high']:.1f}\ndeadline:{data['deadline']:.1f}"
+        labels[
+            node] = f"{data['label']}\nlow:{data['WC_low']:.1f}\nhigh:{data['WC_high']:.1f}\ndeadline:{data['deadline']:.1f}"
 
     nx.draw_networkx_labels(G, pos, labels, font_size=8)
 
@@ -234,6 +232,7 @@ def draw_dag(G: nx.DiGraph, title: str = "DAG") -> None:
     plt.axis('off')
     plt.tight_layout()
     plt.show()
+
 
 def print_dag_stats(G: nx.DiGraph) -> Dict[str, Any]:
     stats = {
@@ -260,7 +259,5 @@ stats = print_dag_stats(dag)
 
 core_pairs = get_cores()
 
-G = assign_tasks_power_consumption(dag, core_pairs)
-
-task_schedular = TaskScheduler(core_pairs, G)
+task_schedular = TaskScheduler(core_pairs, dag)
 task_schedular.make_priority_queue()
