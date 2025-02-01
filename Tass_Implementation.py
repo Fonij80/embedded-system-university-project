@@ -134,6 +134,10 @@ def get_cores():
     core_pairs = []
     return core_pairs
 
+def assign_tasks_power_consumption(G, core_pairs):
+    new_graph = None
+    return new_graph
+
 def generate_dag(n: int, density: float, regularity: float, fatness: float) -> nx.DiGraph:
     if n <= 1:
         raise ValueError("Number of tasks must be greater than 1")
@@ -256,5 +260,7 @@ stats = print_dag_stats(dag)
 
 core_pairs = get_cores()
 
-task_schedular = TaskScheduler(core_pairs, dag)
+G = assign_tasks_power_consumption(dag, core_pairs)
+
+task_schedular = TaskScheduler(core_pairs, G)
 task_schedular.make_priority_queue()
