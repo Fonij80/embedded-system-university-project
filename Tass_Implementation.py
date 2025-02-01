@@ -129,6 +129,11 @@ class TaskScheduler:
                     core_pair.spare_core.schedule(selected_task.get_bi(), t)  # Step 26
                     break
 
+def get_cores():
+    # gets cores from gem5 and convert them to our format
+    core_pairs = []
+    return core_pairs
+
 def generate_dag(n: int, density: float, regularity: float, fatness: float) -> nx.DiGraph:
     if n <= 1:
         raise ValueError("Number of tasks must be greater than 1")
@@ -180,7 +185,6 @@ def generate_dag(n: int, density: float, regularity: float, fatness: float) -> n
             for target in targets:
                 G.add_edge(source, target)
 
-    current_node = 0
     for node in G.nodes:
         slack_factor = random.uniform(1.5, 3)
         deadline = (G.nodes[node]['WC_low'] + G.nodes[node]['WC_high']) * slack_factor
@@ -247,15 +251,10 @@ regularity = 0.6
 fatness = 0.4
 
 dag = generate_dag(n_tasks, density, regularity, fatness)
-
 draw_dag(dag, "Generated DAG")
 stats = print_dag_stats(dag)
 
-# Example usage:
+core_pairs = get_cores()
 
-# # Define tasks and cores here...
-# tasks = [Task("Task1", deadline=10, power=5), Task("Task2", deadline=15, power=3)]
-# core_pairs = [CorePair(primary_core=Core(), spare_core=Core())]
-#
-# scheduler = TaskScheduler(tasks, core_pairs)
-# scheduler.schedule_tasks()
+task_schedular = TaskScheduler(core_pairs, dag)
+task_schedular.make_priority_queue()
