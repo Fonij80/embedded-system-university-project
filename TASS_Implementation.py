@@ -22,9 +22,9 @@ class CorePair:
         # This is just a placeholder; implement your logic accordingly
         return k + 1  # Example: returns next time slot
 
-    def get_tsp(self, active_cores_at):
-        # Logic to return TSP based on active cores
-        return 100  # Example: returns a static value for TSP
+    def get_tsp(self,number_of_active_cores, time):
+        # gets thermal limits from Hotspot and calculates TSP based on active cores
+        return 100, 80  # Example: returns a tuple of static value for high_power and low_power core
 
     def schedule(self, task, time):
         # Logic to schedule a task at a given time
@@ -73,6 +73,7 @@ class TaskScheduler:
         self.core_pairs = core_pairs  # Set of core pairs CP
         self.leaves = []
         self.priority_queue = []
+        self.system = system
 
     def return_leaves(self):
         # Assuming this method returns the leaves of the graph (tasks with no dependencies)
@@ -116,7 +117,7 @@ class TaskScheduler:
             unscheduled_task = self.priority_queue[len(self.priority_queue-1)]
             self.priority_queue.remove(unscheduled_task)
             selected_core_pair = self.min_utilization()
-
+            k=0
             if list(self.graph.predecessors(unscheduled_task)):
                 parent_deadlines = [
                     self.graph.nodes[parent]['deadline'] for parent in self.graph.predecessors(unscheduled_task) if self.graph.has_node(parent)
@@ -126,39 +127,22 @@ class TaskScheduler:
 
             while k <= unscheduled_task['deadline'] - unscheduled_task['WC_high']:
                 t = selected_core_pair.find_first_free_time_slot_after(k)
+                # tsp for high power core
+                tsp = selected_core_pair.get_tsp(self.system.get_number_of_active_cores(), t)[0]
+                if unscheduled_task['high_power'] <= tsp:
+                    # schedules unscheduled task on primary core of selected_core_pair ----------> needs work here
+                    break
+                else:
+                    k = t+1
 
-
-        # while self.priority_queue:
-        #     selected_task = self.select_latest_deadline()  # Step 9
-        #
-        #     if not selected_task:
-        #         break
-        #
-        #     core_pair = self.min_utilization()  # Step 10
-        #     k = max(selected_task.get_finish_time_of_predecessors())  # Step 11
-        #
-        #     while k <= selected_task.deadline - selected_task.get_w():  # Step 12
-        #         t = core_pair.primary_core.find_first_free_time_slot_after(k)  # Step 13
-        #
-        #         TSP_primary = core_pair.primary_core.get_tsp(active_cores_at=t)  # Step 14
-        #
-        #         if selected_task.power <= TSP_primary:  # Step 15
-        #             core_pair.primary_core.schedule(selected_task, t)  # Step 16
-        #             self.priority_queue.remove(selected_task)  # Step 17
-        #             break
-        #
-        #         k = t + 1
-        #
-        #     k = selected_task.get_finish_time_on_primary()  # Step 21
-        #
-        #     while not selected_task.is_bi_scheduled():  # Step 22
-        #         t = core_pair.primary_core.find_first_free_time_slot_after(k)  # Step 23
-        #
-        #         TSP_spare = core_pair.spare_core.get_tsp(active_cores_at=t)  # Step 24
-        #
-        #         if selected_task.get_bi_power() <= TSP_spare:  # Step 25
-        #             core_pair.spare_core.schedule(selected_task.get_bi(), t)  # Step 26
-        #             break
+            k = k + unscheduled_task['WC_high']
+            while(1):
+                t = selected_core_pair.find_first_free_time_slot_after(k)
+                # tsp for low_power core
+                tsp = selected_core_pair.get_tsp(self.system.get_number_of_active_cores(), t)[1]
+                if unscheduled_task['low_power'] <= tsp:
+                    # schedules backup task (B) on spare core of selected_core_pair -----------> needs work here
+                    break
 
 def get_cores():
     # gets cores from gem5 and convert them to our format
@@ -170,9 +154,7 @@ def assign_tasks_power_consumption(G, core_pairs):
     new_graph = G
     return new_graph
 
-def get_TSP(number_of_active_cores):
-    # gets TSP limits from Hotspot
-    pass
+
 
 
 def generate_dag(n: int, density: float, regularity: float, fatness: float) -> nx.DiGraph:
