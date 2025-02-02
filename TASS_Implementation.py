@@ -110,7 +110,7 @@ class TaskScheduler:
     def min_utilization(self):
         # Placeholder for finding the minimum utilization core pair
         # This should return a core pair based on some criteria
-        return self.core_pairs[0]  # Example: Return the first core pair
+        return self.core_pairs[random.randint(0, 4)]  # Example: Return the first core pair
 
     def schedule_tasks(self):
         self.make_priority_queue()
@@ -119,7 +119,7 @@ class TaskScheduler:
             self.priority_queue.remove(unscheduled_task)
             selected_core_pair = self.min_utilization()
             k=0
-            if list(self.graph_copy.predecessors(unscheduled_task)):
+            if len(self.graph_copy.predecessors(unscheduled_task)) > 0:
                 parent_deadlines = [
                     self.graph_copy.nodes[parent]['deadline'] for parent in self.graph_copy.predecessors(unscheduled_task) if self.graph_copy.has_node(parent)
                 ]
