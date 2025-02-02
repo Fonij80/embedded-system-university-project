@@ -70,6 +70,7 @@ class System:
 class TaskScheduler:
     def __init__(self, core_pairs, G, system):
         self.graph = G  # Set of tasks in graph G
+        self.graph_copy = G
         self.core_pairs = core_pairs  # Set of core pairs CP
         self.leaves = []
         self.priority_queue = []
@@ -114,13 +115,13 @@ class TaskScheduler:
     def schedule_tasks(self):
         self.make_priority_queue()
         while len(self.priority_queue)>0:
-            unscheduled_task = self.priority_queue[len(self.priority_queue-1)]
+            unscheduled_task = self.priority_queue[len(self.priority_queue)-1]
             self.priority_queue.remove(unscheduled_task)
             selected_core_pair = self.min_utilization()
             k=0
-            if list(self.graph.predecessors(unscheduled_task)):
+            if list(self.graph_copy.predecessors(unscheduled_task)):
                 parent_deadlines = [
-                    self.graph.nodes[parent]['deadline'] for parent in self.graph.predecessors(unscheduled_task) if self.graph.has_node(parent)
+                    self.graph_copy.nodes[parent]['deadline'] for parent in self.graph_copy.predecessors(unscheduled_task) if self.graph_copy.has_node(parent)
                 ]
                 if parent_deadlines:
                     k = max(parent_deadlines)
@@ -130,7 +131,8 @@ class TaskScheduler:
                 # tsp for high power core
                 tsp = selected_core_pair.get_tsp(self.system.get_number_of_active_cores(), t)[0]
                 if unscheduled_task['high_power'] <= tsp:
-                    # schedules unscheduled task on primary core of selected_core_pair ----------> needs work here
+                    print(f'core pair: {selected_core_pair.pair_id} , core: primary, task: {unscheduled_task}')
+                    # schedules unscheduled task on primary core of selected_core_pair
                     break
                 else:
                     k = t+1
@@ -141,12 +143,18 @@ class TaskScheduler:
                 # tsp for low_power core
                 tsp = selected_core_pair.get_tsp(self.system.get_number_of_active_cores(), t)[1]
                 if unscheduled_task['low_power'] <= tsp:
-                    # schedules backup task (B) on spare core of selected_core_pair -----------> needs work here
+                    print(f'core pair: {selected_core_pair.pair_id} , core: spare, task: {unscheduled_task}')
+                    # schedules backup task (B) on spare core of selected_core_pair
                     break
 
 def get_cores():
     # gets cores from gem5 and convert them to our format
     core_pairs = []
+    for i in range(5):
+        x = random.uniform(2, 8)
+        y = random.uniform(2, 8)
+        CP = CorePair(max(x, y), min(x, y))
+        core_pairs.append(CP)
     return core_pairs
 
 def assign_tasks_power_consumption(G, core_pairs):
