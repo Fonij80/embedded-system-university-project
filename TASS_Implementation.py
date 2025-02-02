@@ -132,7 +132,9 @@ class TaskScheduler:
                 tsp = selected_core_pair.get_tsp(self.system.get_number_of_active_cores(), t)[0]
                 if unscheduled_task['high_power'] <= tsp:
                     print(f'core pair: {selected_core_pair.pair_id} , core: primary, task: {unscheduled_task}')
+                    self.system.activate(selected_core_pair.pair_id, 0)
                     # schedules unscheduled task on primary core of selected_core_pair
+
                     break
                 else:
                     k = t+1
@@ -144,6 +146,7 @@ class TaskScheduler:
                 tsp = selected_core_pair.get_tsp(self.system.get_number_of_active_cores(), t)[1]
                 if unscheduled_task['low_power'] <= tsp:
                     print(f'core pair: {selected_core_pair.pair_id} , core: spare, task: {unscheduled_task}')
+                    self.system.activate(selected_core_pair.pair_id, 1)
                     # schedules backup task (B) on spare core of selected_core_pair
                     break
 
@@ -159,11 +162,12 @@ def get_cores():
 
 def assign_tasks_power_consumption(G, core_pairs):
     # assigns a power consumption on low_power and high_power core to tasks
-    new_graph = G
-    return new_graph
-
-
-
+    for node in G:
+        x = random.uniform(2, 8)
+        y = random.uniform(2, 8)
+        G.nodes[node]['high_power'] = max(x, y)
+        G.nodes[node]['low_power'] = min(x, y)
+    return G
 
 def generate_dag(n: int, density: float, regularity: float, fatness: float) -> nx.DiGraph:
     if n <= 1:
